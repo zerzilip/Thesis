@@ -1,0 +1,136 @@
+---
+title: "First_test"
+author: "Gergely Talyigas"
+date: "06/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ROCR)
+library(ggplot2)
+```
+
+### Generating data
+
+The function generates n datapoints with a logistic model using beta as coefficients, where the first term is the intercept. 
+```{r}
+generate_data <- function(n, beta){
+  n_pred <- length(beta) - 1 #numper of predictors
+  x <- matrix(rnorm(n*n_pred), n, n_pred) #generated x
+  
+  design_matrix <- cbind(1, x)
+  
+  p <- as.numeric(1/(1+exp(- design_matrix %*% beta))) #true probabilities from logit model
+  y <- rbinom(n, 1, p) #drawing outcomes from Bernoulli distribution
+  dat <- as.data.frame(x)
+  dat$y <- y; dat$p <- p
+  return(dat)
+}
+```
+
+### Fitting logistic model
+
+```{r}
+set.seed(6042021)
+n <- 100
+beta <- c(-0.3, 1, -1, .3) #using 3 predictors
+
+full_data <- generate_data(n, beta)
+#fitting the model
+logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+summary(logitm)
+```
+As we can see the estimates are quite good
+
+Next, I calculated different AUC scores
+```{r}
+predictions <- predict(logitm, full_data, type="response")
+
+#apparent AUC
+appar_AUC <- pROC::auc(full_data$y, predictions, quiet = TRUE)
+
+#estimated AUC
+estimated_AUC <- pROC::auc(full_data$y, full_data$p, quiet = TRUE)
+
+#Estimating the conditional AUC
+new_data <- generate_data(10000, beta)
+
+pred_new <- predict(logitm, new_data, type="response")
+conditional_AUC <- pROC::auc(new_data$y, pred_new, quiet = TRUE)
+conditional_AUC
+```
+
+
+```{r}
+set.seed(1337)
+n_simulation <- 100
+n <- 100
+beta <- c(-0.3, 1, -1, .3)
+
+df_AUC <- data.frame(estimated_AUC = numeric(n_simulation),
+                     conditional_AUC = numeric(n_simulation),
+                     apparent_AUC = numeric(n_simulation))
+
+for (i in 1:n_simulation){
+  full_data <- generate_data(n, beta)
+  logit_model <- glm(y ~. -p, family = "binomial", data = full_data)
+  
+  
+  predictions <- predict(logit_model, full_data, type="response")
+  
+  df_AUC$apparent_AUC[i] <- pROC::auc(full_data$y, predictions, quiet = TRUE)
+  df_AUC$estimated_AUC[i] <- pROC::auc(full_data$y, full_data$p, quiet = TRUE)
+  
+  new_data <- generate_data(10000, beta)
+  pred_new <- predict(logit_model, new_data, type="response")
+  df_AUC$conditional_AUC[i] <- pROC::auc(new_data$y, pred_new, quiet = TRUE)
+}
+
+ggplot(stack(df_AUC), aes(x = ind, y = values)) +
+  geom_boxplot()
+```
+
+Testing the average of AUC
+
+```{r}
+set.seed(20071969)
+n_sim <- 1000
+
+auc_1000 <- numeric(n_sim)
+auc_20 <- numeric(n_sim)
+
+
+
+for (i in 1:n_sim){
+  
+  n <- 100
+  beta <- c(-0.3, 1, -1, .3) #using 3 predictors
+  full_data <- generate_data(n, beta)
+  
+  logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+  new_data <- generate_data(1000, beta)
+  pred <- predict(logitm, new_data, type="response")
+  auc_1000[i] <- pROC::auc(new_data$y, pred, quiet = TRUE)
+    
+  auc_temp <- numeric(50)
+  for (j in 1:50){
+    new_data <- generate_data(20, beta)
+    pred <- predict(logitm, new_data, type="response")
+    auc_temp[j] <- tryCatch({pROC::auc(new_data$y, pred, quiet = TRUE)},
+                            error=function(cond){0})
+      
+  }
+  
+  auc_20[i] <- mean(auc_temp)
+  
+}
+
+auc_df <- data.frame(values = c(auc_20,auc_1000),
+                     groups = c(rep("20", n_sim), rep("1000", n_sim)))
+
+ggplot(auc_df, aes(x = values, fill = groups)) +
+  geom_histogram(position = "identity", alpha = 0.3, bins = 20)
+
+```
+

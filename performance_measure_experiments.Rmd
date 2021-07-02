@@ -1,0 +1,347 @@
+---
+title: "Simulation on the target values"
+author: "Gergely Talyigas + edited by Mirko"
+date: "09/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ROCR)
+library(ggplot2)
+library(MASS)
+library(rms)
+```
+
+### Cox slope calibration
+
+```{r}
+logit <- function (p) log(p/(1 - p))
+
+cox_calibration <- function(y, prob){
+  if (max(prob[y == 0]) < min(prob[y == 1])){
+      return(list(slope = NA, intercept = NA))
+  }
+  dat <- data.frame(e = prob, o = y)
+  dat$e[dat$e < 0.0000000001] = 1e-10
+  dat$e[dat$e > 0.9999999999] = 1-1e-10
+  dat$logite <- logit(dat$e)
+  
+  mfit = glm(formula = o~logite, 
+             family = binomial(link = "logit"), dat)
+  
+  return(list(slope = as.numeric(mfit$coefficients[2]),
+              intercept = as.numeric(mfit$coefficients[1])))
+}
+```
+
+
+### Generating data
+
+The function generates n datapoints with a logistic model using beta as coefficients, where the first term is the intercept. 
+```{r}
+generate_data <- function(n, beta){
+  n_pred <- length(beta) - 1 #numper of predictors
+  x <- matrix(rnorm(n*n_pred), n, n_pred) #generated x
+  
+  design_matrix <- cbind(1, x)
+  
+  p <- as.numeric(1/(1+exp(- design_matrix %*% beta))) #true probabilities from logit model
+  y <- rbinom(n, 1, p) #drawing outcomes from Bernoulli distribution
+  dat <- as.data.frame(x)
+  dat$y <- y; dat$p <- p
+  return(dat)
+}
+```
+
+### Fitting logistic model
+
+```{r}
+set.seed(6042021)
+n <- 100
+beta <- c(-0.3, 1, -1, .3) #using 3 predictors
+
+full_data <- generate_data(n, beta)
+#fitting the model
+logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+summary(logitm)
+```
+As we can see the estimates are quite good
+
+Next, I calculated different AUC scores
+```{r}
+predictions <- predict(logitm, full_data, type="response")
+
+#apparent AUC
+appar_AUC <- pROC::auc(full_data$y, predictions, quiet = TRUE)
+
+#estimated AUC
+estimated_AUC <- pROC::auc(full_data$y, full_data$p, quiet = TRUE)
+
+#Estimating the conditional AUC
+new_data <- generate_data(10000, beta)
+
+pred_new <- predict(logitm, new_data, type="response")
+conditional_AUC <- pROC::auc(new_data$y, pred_new, quiet = TRUE)
+conditional_AUC
+```
+
+Next, the different calibration slope values
+
+```{r}
+appar_cox <- cox_calibration(full_data$y, predictions)
+estimated_cox <- cox_calibration(full_data$y, full_data$p)
+conditional_cox <- cox_calibration(new_data$y, pred_new)
+
+```
+
+Harrel's method gives the same slope estimate
+```{r}
+estimated_cox
+val.prob(pred_new, new_data$y)
+```
+
+
+
+```{r}
+set.seed(1337)
+n_simulation <- 1000
+n <- 100
+beta <- c(-0.3, 1, -1, .3)
+
+df_AUC <- data.frame(estimated_AUC = numeric(n_simulation),
+                     conditional_AUC = numeric(n_simulation),
+                     apparent_AUC = numeric(n_simulation))
+
+df_CS <- data.frame(estimated_slope = numeric(n_simulation),
+                     conditional_slope = numeric(n_simulation),
+                     apparent_slope = numeric(n_simulation),
+                    estimated_intercept = numeric(n_simulation),
+                     conditional_intercept = numeric(n_simulation),
+                     apparent_intercept = numeric(n_simulation))
+
+for (i in 1:n_simulation){
+  full_data <- generate_data(n, beta)
+  logit_model <- glm(y ~. -p, family = "binomial", data = full_data)
+  
+  
+  predictions <- predict(logit_model, full_data, type="response")
+  
+  cal_slp <- cox_calibration(full_data$y, predictions)
+  df_CS$apparent_slope[i] <- cal_slp$slope
+  df_CS$apparent_intercept[i] <- cal_slp$intercept
+  df_AUC$apparent_AUC[i] <- pROC::auc(full_data$y, predictions, quiet = TRUE)
+  
+  cal_slp <- cox_calibration(full_data$y, full_data$p)
+  df_CS$estimated_slope[i] <- cal_slp$slope
+  df_CS$estimated_intercept[i] <- cal_slp$intercept
+  df_AUC$estimated_AUC[i] <- pROC::auc(full_data$y, full_data$p, quiet = TRUE)
+  
+  new_data <- generate_data(10000, beta)
+  pred_new <- predict(logit_model, new_data, type="response")
+  
+  
+  cal_slp <- cox_calibration(new_data$y, pred_new)
+  df_CS$conditional_slope[i] <- cal_slp$slope
+  df_CS$conditional_intercept[i] <- cal_slp$intercept
+  df_AUC$conditional_AUC[i] <- pROC::auc(new_data$y, pred_new, quiet = TRUE)
+}
+
+df_AUC$theoretical_AUC <- df_AUC$estimated_AUC
+df_AUC <- df_AUC[,2:4]
+
+df_CS$theoretical_slope <- df_CS$estimated_slope
+df_CS$theoretical_intercept <- df_CS$conditional_intercept
+
+df_CS <- df_CS[,c(2,3,7,5,6,8)]
+
+ggplot(stack(df_AUC), aes(x = ind, y = values)) +
+  geom_boxplot()
+
+ggplot(stack(df_CS), aes(x = ind, y = values)) +
+  geom_boxplot()
+
+
+hist(df_CS$conditional_slope, 20)
+```
+
+# Looking at pairs and differences
+
+```{r}
+cor(df_AUC)
+pairs(df_AUC)
+```
+
+```{r}
+diff = data.frame(
+  df_AUC$apparent_AUC - df_AUC$theoretical_AUC,
+  df_AUC$conditional_AUC - df_AUC$theoretical_AUC
+)
+names(diff) = c('apparent_vs_theoretical',
+                'conditional_vs_theoretical')
+ggplot(stack(diff), aes(x = ind, y = values)) +
+  geom_boxplot()
+```
+
+In most cases, the apparent AUC is slightly higher than the estimated AUC:
+
+```{r}
+summary(diff$apparent_vs_estimated)
+table(diff$apparent_vs_estimated > 0)
+```
+
+However, the two quantities appear to be essentially the same. 
+Possible explanation for this result: as $n \to \infty$, $\hat{p} \to p$.
+
+
+Effect of differen external sample size on conditional performance measures
+```{r}
+#options(warn=1)
+set.seed(20071969)
+n_sim <- 100
+counter <- 1
+auc_1000 <- numeric(n_sim)
+auc_20 <- numeric(n_sim)
+
+slope_1000 <- numeric(n_sim)
+slope_20 <- numeric(n_sim)
+intercept_1000 <- numeric(n_sim)
+intercept_20 <- numeric(n_sim)
+
+for (i in 1:n_sim){
+  
+  n <- 100
+  beta <- c(-0.3, 1, -1, .3) #using 3 predictors
+  full_data <- generate_data(n, beta)
+  
+  logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+  new_data <- generate_data(1000, beta)
+  pred <- predict(logitm, new_data, type="response")
+  auc_1000[i] <- pROC::auc(new_data$y, pred, quiet = TRUE)
+  cal_slp <- cox_calibration(new_data$y, pred)
+  slope_1000[i] <- cal_slp$slope
+  intercept_1000[i] <- cal_slp$intercept
+    
+  auc_temp <- numeric(50)
+  slope_temp <- numeric(50)
+  intercept_temp <- numeric(50)
+  for (j in 1:50){
+    new_data <- generate_data(20, beta)
+    pred <- predict(logitm, new_data, type="response")
+    auc_temp[j] <- tryCatch({pROC::auc(new_data$y, pred, quiet = TRUE)},
+                            error=function(cond){0})
+    cal_slp <- cox_calibration(new_data$y, pred)
+    slope_temp[j] <- cal_slp$slope
+    intercept_temp[j] <- cal_slp$intercept
+    counter <- counter + 1
+  }
+
+  auc_20[i] <- mean(auc_temp)
+  slope_20[i] <- mean(slope_temp)
+  intercept_20[i] <- mean(intercept_temp)
+  
+}
+
+auc_df <- data.frame(values = c(auc_20,auc_1000),
+                     groups = c(rep("20", n_sim), rep("1000", n_sim)))
+ggplot(auc_df, aes(x = values, fill = groups)) +
+  geom_histogram(position = "identity", alpha = 0.3, bins = 20)
+
+
+hist(slope_1000)
+hist(slope_20[slope_20<5], 20)
+hist(intercept_1000)
+hist(intercept_20[abs(intercept_20)<5])
+# slope_df <- data.frame(values = c(slope_20, slope_1000),
+#                      groups = c(rep("20", n_sim), rep("1000", n_sim)))
+# ggplot(slope_df, aes(x = values, fill = groups)) +
+#   geom_histogram(position = "identity", alpha = 0.3, bins = 20)
+
+
+```
+
+Now concentrating only on the calibration slope and intercept, becuase the EV of AUC seems to be independent of the external sample size
+```{r}
+
+simulate_different_sample_size <- function(n_sim, external_sizes, beta, n_train){
+
+  n <- 100
+   #using 3 predictors
+
+  
+  slope_df <- as.data.frame(matrix(NA, n_sim, length(external_sizes)))
+  intercept_df <- as.data.frame(matrix(NA, n_sim, length(external_sizes)))
+  
+  for(ss_index in 1:length(external_sizes)){
+    sample_size <- external_sizes[ss_index]
+    
+    for (i in 1:n_sim){
+      full_data <- generate_data(n, beta)
+      logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+      
+      new_data <- generate_data(sample_size, beta)
+      pred <- predict(logitm, new_data, type="response")
+      cox_cal <- cox_calibration(new_data$y, pred)
+      slope_df[i, ss_index] <- cox_cal[1]
+      intercept_df[i, ss_index] <- cox_cal[2]
+    }
+
+  }
+  return(list(slope = slope_df, intercept = intercept_df))
+}
+
+n_sim <- 1000
+external_sample_sizes <- c(20, 50, 100, 200, 500,1000, 2000)
+beta <- c(-0.3, 1, -1, .3)
+sim_results <- simulate_different_sample_size(n_sim, external_sample_sizes)
+names(sim_results$slope) <- external_sample_sizes
+
+
+expected_slope <- apply(sim_results$slope, 2, mean, na.rm = TRUE)
+apply(sim_results$intercept, 2, mean)
+
+plot()
+
+
+slope_df <- stack(sim_results$slope, select = names(sim_results$slope)[c(2, 4, 6)])
+
+ggplot(slope_df, aes(x = values, fill = ind)) +
+  geom_histogram(position = "identity", alpha = 0.3, bins = 50)
+```
+
+The calculated expected Cox slope seems to decrease with the sample size of the external data. Also, many warning occour when samplse size is low (like 20) because perfect separation occours in the slope estimation. This also means 10-fold CV with 200 sample is likely to fail with Cox calibration.
+
+### No-information rate experiments
+
+```{r}
+set.seed(632632632)
+n <- 100
+beta <- c(-0.3, 1, -1, .3)
+
+full_data <- generate_data(n, beta)
+logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+
+pred <- predict(logitm, full_data, type="response")
+
+n_sim <- 1000
+cox_slope_ni <- numeric(n_sim)
+cox_intercept_ni <- numeric(n_sim)
+auc_ni <- numeric(n_sim)
+mse_ni <- numeric(n_sim)
+
+for (i in 1:n_sim){
+  random_response <- sample(pred)
+  cox_cal <- cox_calibration(full_data$y, random_response)
+  cox_slope_ni[i] <- cox_cal$slope
+  cox_intercept_ni[i] <- cox_cal$intercept
+  auc_ni[i] <- pROC::auc(full_data$y, random_response, quiet = TRUE)
+  mse_ni[i] <- mean((full_data$y - random_response)^2)
+}
+
+hist(cox_slope_ni, 20)
+hist(cox_intercept_ni, 20)
+hist(auc_ni, 20)
+hist(mse_ni, 20)
+
+```
+

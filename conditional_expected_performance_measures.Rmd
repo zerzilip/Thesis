@@ -1,0 +1,382 @@
+---
+title: "Conditional expected performance measures"
+author: "Gergely Talyigas"
+date: "19/05/2021"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(gridExtra)
+
+red = "#db3737"
+orange = "#e6a23c"
+blue = "#3a7cc7"
+purple = "#8131b0"
+```
+
+## Necessary functions
+```{r}
+# The function generates data from a simple logistic model
+generate_data <- function(n, beta){
+  n_pred <- length(beta) - 1 #numper of predictors
+  x <- matrix(rnorm(n*n_pred), n, n_pred) #generated x
+  design_matrix <- cbind(1, x)
+  
+  #true probabilities from logit model
+  p <- as.numeric(1/(1+exp(- design_matrix %*% beta))) 
+  #drawing outcomes from Bernoulli distribution
+  y <- rbinom(n, 1, p) 
+  dat <- as.data.frame(x)
+  dat$y <- y; dat$p <- p
+  return(dat)
+}
+
+#Performance measures
+
+AUC <- function(y, prob, ...) if (all(1 == y) | all(0 == y)){NA
+  }else as.numeric(pROC::auc(y, prob, direction="<", quiet = TRUE))
+
+Accuracy <- function(y, prob, t = .5, ...) mean(y == (prob > t))
+
+logit <- function (p) log(p/(1 - p))
+
+cox_calibration <- function(y, prob){
+  #if there is perfect calibration, the output is NA
+  if (max(prob[y == 0]) < min(prob[y == 1])){
+      return(list(slope = NA, intercept = NA))
+  }
+  dat <- data.frame(e = prob, o = y)
+  dat$e[dat$e < 0.0000000001] = 0.0000000001
+  dat$e[dat$e > 0.9999999999] = 0.9999999999
+  #transform the probabilites
+  dat$logite <- logit(dat$e)
+  
+  mfit = glm(formula = o~logite, 
+             family = binomial(link = "logit"), dat)
+  
+  return(list(slope = as.numeric(mfit$coefficients[2]),
+              intercept = as.numeric(mfit$coefficients[1])))
+}
+```
+
+### checking the functions
+```{r}
+set.seed(26042021)
+n <- 100
+beta <- c(0, 1, -1, .5, -.5) #using 4 predictors
+
+full_data <- generate_data(n, beta)
+sum(full_data$y) #We have 45 events
+
+#fitting the model
+logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+summary(logitm) 
+
+#The model is fairly close to the true data generating model
+
+external_data <- generate_data(n, beta)
+pred <- predict(logitm, external_data, type="response")
+cox_calibration(external_data$y, pred)
+Accuracy(external_data$y, pred)
+AUC(external_data$y, pred)
+```
+
+
+### Problems with the estimation of Cox slope
+Simulation *3.A*
+```{r}
+set.seed(13770000)
+
+beta <- c(0, 1, -1, .5, -.5)
+n_cox_sim <- 1000
+sample_size <- c(5, 10, 20, 50, 100)
+slope_results <- matrix(NA, n_cox_sim, length(sample_size))
+
+for (i in 1:n_cox_sim){
+  full_data <- generate_data(100, beta)
+  logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+  for (j in 1:length(sample_size)){
+    external_data <- generate_data(sample_size[j], beta)
+    pred <- predict(logitm, external_data, type="response")
+    slope_results[i, j] <- cox_calibration(external_data$y, pred)[[1]]
+  }
+}
+
+apply(slope_results, 2, function(x) sum(is.na(x)))
+
+```
+
+
+
+### The function for simulation
+```{r}
+simulate_different_sample_size <- function(n_sim, external_sizes, beta,
+                                           n_training, fixed_training){
+  
+  accuracy_df <- as.data.frame(matrix(NA, n_sim, length(external_sizes)))
+  auc_df <- as.data.frame(matrix(NA, n_sim, length(external_sizes)))
+  slope_df <- as.data.frame(matrix(NA, n_sim, length(external_sizes)))
+  intercept_df <- as.data.frame(matrix(NA, n_sim, length(external_sizes)))
+  
+  col_names <- paste("n_", external_sizes, sep = "")
+  names(accuracy_df) <- col_names; names(auc_df) <- col_names
+  names(slope_df) <- col_names; names(intercept_df) <- col_names
+  
+  if(fixed_training){
+      full_data <- generate_data(n_training, beta)
+      logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+      print(summary(logitm))
+  }
+  
+  for(i in 1:n_sim){
+    
+    if (!fixed_training){
+      full_data <- generate_data(n_training, beta)
+      logitm <- glm(y ~. -p, family = "binomial", data = full_data)
+    }
+    
+    for (j in 1:length(external_sizes)){
+      external_data <- generate_data(external_sizes[j], beta)
+      pred <- predict(logitm, external_data, type="response")
+      cox_cal <- cox_calibration(external_data$y, pred)
+      
+      accuracy_df[i, j] <- Accuracy(external_data$y, pred)
+      auc_df[i, j] <- AUC(external_data$y, pred)
+      slope_df[i, j] <- cox_cal[1]
+      intercept_df[i, j] <- cox_cal[2]
+    }
+  }
+  
+  result <- list(accuracy = accuracy_df, auc = auc_df,
+                 slope = slope_df, intercept = intercept_df)
+  
+  if (fixed_training){
+    return(list(EP_df = result, model = logitm, data = full_data))
+  } else {
+    return(result)
+  }
+}
+```
+
+### Running the simulations
+```{r}
+set.seed(20071969)
+n_training <- 100 #relatively small sample size but almost always EPV > 10
+beta <- c(0, 1, -1, .5, -.5) #using 3 predictors
+
+n_sim <- 1000 #Running it with bigger sample gives similar results
+external_sample_sizes <- c(10, 20, 50, 100, 200, 500, 1000, 2000) 
+
+#first the training sets are always regenerated
+sim_results <- simulate_different_sample_size(n_sim, external_sample_sizes,
+                                              beta, n_training , FALSE)
+```
+The warning occurs due to the small sample size when n = 20
+
+```{r}
+res_df <- sim_results$accuracy
+
+get_quantiles <- function(result_df, prob = c(0.1, 0.25, 0.5, 0.75, 0.9)){
+  quantile_matrix <- apply(result_df, 2, function(x) quantile(x, prob, na.rm = TRUE))
+  quantiles <- as.data.frame(t(quantile_matrix))
+  quantiles$average <- apply(result_df, 2, mean, na.rm = TRUE)
+  return(quantiles)
+}
+
+plot_quantiles <- function(result_df, sample_sizes, title, col = "red", legend = TRUE){
+  probs <-  c(0.1, 0.25, 0.5, 0.75, 0.9)
+  quantiles <- get_quantiles(result_df, probs)
+  quantiles$sample_s <- sample_sizes
+  
+  p <- ggplot(quantiles, aes(x = sample_s)) +
+    geom_ribbon(aes(ymin=`10%`,ymax=`90%`,alpha="10-90 %"), fill = col) +
+    geom_ribbon(aes(ymin=`25%`,ymax=`75%`, alpha="25-75 %"), fill= col) +
+    geom_line(aes(y = `50%`, color = "Median"), lwd = 1.1, alpha = 0.8)+
+    geom_line(aes(y = average, color = "Mean"), lwd = 1.1, linetype = 2) +
+    scale_x_continuous(trans='log10', breaks = sample_sizes,
+                       minor_breaks = NULL, labels = sample_sizes)+
+    scale_alpha_manual(name = 'Quantiles', 
+         values =c("10-90 %" = 0.2,"25-75 %" = 0.35, "Median" = 0.8))+
+    scale_color_manual(name = "",
+                       values = c("Median" = col, "Mean" = "grey20"),
+                       guide = guide_legend(override.aes = list(linetype = c(2, 1),
+                                                                lwd = c(.5, .9)))) +
+    ggtitle(title) +
+    xlab("External sample size") + ylab("Values") 
+
+  if (!legend) p <-  p + theme(legend.position = "none")
+  return(p)
+}
+
+p1 <- plot_quantiles(sim_results$accuracy, external_sample_sizes, "Accuracy", red); p1
+```
+
+```{r}
+get_quantiles(sim_results$accuracy)
+get_quantiles(sim_results$auc)
+get_quantiles(sim_results$slope)
+get_quantiles(sim_results$intercept)
+```
+As we can see all the performance measures except the slope behaves similarly, their average does not depend on the sample size. Howeve, for the calibration slope, it shows an assymptotic behaviour. 
+
+
+```{r}
+is_legend <- TRUE
+
+p1 <- plot_quantiles(sim_results$accuracy, external_sample_sizes, "Accuracy", red, is_legend)
+p2 <- plot_quantiles(sim_results$auc, external_sample_sizes, "AUC", orange, is_legend)
+p3 <- plot_quantiles(sim_results$slope, external_sample_sizes,
+                     "Calibration slope", blue, is_legend)
+p4 <- plot_quantiles(sim_results$intercept, external_sample_sizes,
+                     "Calibration intercept", purple, is_legend)
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+```
+
+
+```{r, eval = FALSE}
+png('../Figures/test.png', width = 18, height = 22, units = 'cm', res = 400)
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+dev.off()
+```
+
+
+
+#Fixing the model
+
+```{r}
+set.seed(20071969)
+n_training <- 100 #relatively small sample size but almost always EPV > 10
+beta <- c(0, 1, -1, .5, -.5) #using 3 predictors
+
+n_sim <- 1000 #Running it with bigger sample gives similar results
+external_sample_sizes <- c(10, 20, 50, 100, 200, 500, 1000, 2000) 
+
+#
+sim_results_fixed <- simulate_different_sample_size(n_sim, external_sample_sizes,
+                                              beta, n_training ,
+                                              fixed_training = TRUE)
+
+```
+
+```{r}
+sim_r_f <- sim_results_fixed$EP_df
+
+
+get_quantiles(sim_r_f$accuracy)
+get_quantiles(sim_r_f$auc)
+get_quantiles(sim_r_f$slope)
+get_quantiles(sim_r_f$intercept)
+```
+
+
+```{r}
+is_legend <- TRUE
+
+p1 <- plot_quantiles(sim_r_f$accuracy, external_sample_sizes, "Accuracy", red, is_legend)
+p2 <- plot_quantiles(sim_r_f$auc, external_sample_sizes, "AUC", orange, is_legend)
+p3 <- plot_quantiles(sim_r_f$slope, external_sample_sizes, "Calibration slope", blue, is_legend)
+p4 <- plot_quantiles(sim_r_f$intercept, external_sample_sizes,
+                     "Calibration intercept", purple, is_legend)
+
+
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+```
+
+
+```{r, eval = FALSE}
+png('../Figures/ext_fixed_tr.png', width = 18, height = 22, units = 'cm', res = 400)
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+dev.off()
+```
+
+
+```{r, eval=FALSE}
+set.seed(05051789)
+n_training <- 100 #relatively small sample size but almost always EPV > 10
+beta <- c(0, 1, -1, .5, -.5) #using 3 predictors
+
+n_sim <- 100 #Running it with bigger sample gives similar results
+external_sample_sizes <- rep(c(1,2,5), 4) * rep(c(100, 1000, 10000, 100000), each = 3)
+external_sample_sizes <- c(external_sample_sizes, 10^6)
+#first the training sets are always regenerated
+
+
+system.time(large_sim <- simulate_different_sample_size(n_sim, external_sample_sizes,
+                                              beta, n_training , TRUE))
+#It took  23 minutes on my computer to run
+save(large_sim, sim_results_fixed, sim_results, file = "cond_expected_sim.Rdata")
+```
+
+```{r}
+load("cond_expected_sim.Rdata")
+plot_quantiles(large_sim$EP_df$slope, external_sample_sizes, col = blue, "vmi")
+
+s_fix_tr <- large_sim$EP_df
+
+less <- length(external_sample_sizes)
+sd_fixed <- data.frame(values = c(apply(s_fix_tr$accuracy, 2, sd, na.rm = TRUE),
+                                  apply(s_fix_tr$auc, 2, sd, na.rm = TRUE),
+                                  apply(s_fix_tr$slope, 2, sd, na.rm = TRUE),
+                                  apply(s_fix_tr$intercept, 2, sd, na.rm = TRUE)),
+                       external_size = rep(external_sample_sizes, 4),
+                       PM = factor(c(rep("Accuracy", less), rep("AUC", less),
+                                     rep("CS", less), rep("CI", less)),
+                                   levels = c("Accuracy", "AUC", "CS", "CI")))
+
+
+
+p <- ggplot(data = sd_fixed, aes(external_size, values, color = PM)) +
+  geom_line(size = 1.2, alpha = .6) +
+  scale_color_manual(values=c(red, orange, blue, purple))+
+  scale_x_continuous(trans='log10', breaks = c(100, 1000, 10000, 100000, 1000000),
+                     labels = c("100", "1000", "10000", "100000", "1000000")) +
+  scale_y_continuous(trans='log10') +
+  xlab("External sample size") + ylab("Standard deviation") +
+  theme(legend.position = c(.85,.75))
+  
+p
+```
+
+```{r, eval = FALSE}
+png('../Figures/cond_loglog_sd.png', width = 12, height = 10, units = 'cm', res = 300)
+p
+dev.off()
+```
+
+```{r}
+loglog_model <- lm(log(values) ~ log(external_size), sd_fixed[sd_fixed$PM == "CS",])
+summary(loglog_model)
+
+mean(sd_fixed$values[sd_fixed$PM == "CS"] /sd_fixed$values[sd_fixed$PM == "AUC"])
+mean(sd_fixed$values[sd_fixed$PM == "CI"] /sd_fixed$values[sd_fixed$PM == "AUC"])
+```
+The lines have a slope of -.5, which means the standard deviation is decreasing 
+
+
+### test time complexity
+
+```{r}
+external_data <- generate_data(10^5, beta)
+pred <- predict(logitm, external_data, type = "response")
+
+system.time( replicate(1, cox_calibration(external_data$y, pred)))
+system.time( replicate(100, AUC(external_data$y, pred)))
+
+
+external_data <- generate_data(2*10^5, beta)
+pred <- predict(logitm, external_data, type = "response")
+
+system.time( replicate(1, cox_calibration(external_data$y, pred)))
+system.time( replicate(10, AUC(external_data$y, pred)))
+
+
+external_data <- generate_data(10^6, beta)
+pred <- predict(logitm, external_data, type = "response")
+
+system.time( replicate(1, cox_calibration(external_data$y, pred)))
+system.time( replicate(1, AUC(external_data$y, pred)))
+```
+ It seems approximately linear, so there is no high cost of 

@@ -1,0 +1,12 @@
+#### Running R serial test
+This is s2633728 and this job has the ID 86584
+This job was submitted from /home/s2633728/R_scripts
+This job runs on node011
+I am currently in /home/s2633728/R_scripts
+It is now Tue Apr 27 17:08:23 CEST 2021
+[/bin/bash] Run script
+[1] "/home/s2633728/R_scripts"
+[1] "Using  10  cores"
+[1] "It took  2 seconds to run."
+[/bin/bash] Script finished
+#### Finished R serial test
