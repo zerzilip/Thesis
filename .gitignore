@@ -1,4 +1,5 @@
 *.Rdata
 *.pdf
 *.png
-simulation_code.zip
+Test\simulation_code.zip
+Simulation\running_simulations\other_simulations
