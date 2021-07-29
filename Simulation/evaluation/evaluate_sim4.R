@@ -31,7 +31,7 @@ p <- ggplot(large_dataset, aes(x = p)) +
 p
 
 
-png('../../Figures/p_dist.png', width = 10, height = 6, units = 'cm', res = 400)
+png('../Figures/p_dist.png', width = 10, height = 6, units = 'cm', res = 400)
 p
 dev.off()
 
@@ -94,7 +94,7 @@ p_scatt4 <- plot_estimates_and_EP(signal_strength$signal_strength_2, 4, 5, purpl
 
 p_scatt3 <- p_scatt3 + theme(legend.position = "none")
 
-png('../../Figures/scatter_2.png', width = 22, height = 5, units = 'cm', res = 400)
+png('../Figures/scatter_2.png', width = 22, height = 5, units = 'cm', res = 400)
 plot_grid(p_scatt1, p_scatt2, p_scatt3, p_scatt4, ncol = 4, rel_widths = c(1,1,1,1.4),labels = "AUTO")
 dev.off()
 
@@ -143,12 +143,14 @@ au_lim <- coord_cartesian(ylim = c(-0.15,0.35))
 cs_lim <- coord_cartesian(ylim = c(-0.65, 0.1))
 ci_lim <- coord_cartesian(ylim = c(-0.85, 0.25))
 
+ac_lim <- au_lim <- cs_lim <- ci_lim <- coord_cartesian(ylim = c(-1,1))
+
 p_ac1 <- plot_correlations(signal_strength, 1, ss_vars,  val_cols, val_labels, c(1,3,5,6,7))+
-  y_t + xlab("") + ggtitle("4.A") + ylab("\u03c1 (accuracy)") + ac_lim
+  y_t + xlab("") + ggtitle("Simulation 4.A") + ylab("\u03c1 (accuracy)") + ac_lim
 p_ac2 <- plot_correlations(training_size, 1, ts_vars, val_cols, val_labels, c(1,3,5,6,7),no_scale=T)+
-  y_t + ggtitle("4.B")+ xlab("") + ylab("") + ac_lim
+  y_t + ggtitle("Simulation 4.B")+ xlab("") + ylab("") + ac_lim
 p_ac3 <- plot_correlations(class_ratio, 1, cr_vars, val_cols, val_labels, c(1,3,5,6,7))+
-  y_t + ggtitle("4.C")+ xlab("") + ylab("") + ac_lim
+  y_t + ggtitle("Simulation 4.C")+ xlab("") + ylab("") + ac_lim
 p_au1 <- plot_correlations(signal_strength, 2, ss_vars, val_cols, val_labels) +
   y_t + xlab("") + ylab("\u03c1 (AUC)") + au_lim
 p_au2 <- plot_correlations(training_size, 2, ts_vars, val_cols, no_scale =  T) +
@@ -169,13 +171,13 @@ p_ci3 <- plot_correlations(class_ratio, 4, cr_vars, val_cols) +
   y_t + xlab("Class ratio") + ylab("") + ci_lim
 
 pg <- plot_grid(p_ac1, p_ac2, p_ac3, p_au1, p_au2, p_au3, p_cs1, p_cs2, p_cs3,
-                p_ci1, p_ci2, p_ci3, nrow = 4, ncol = 3, align = "vh", labels = "AUTO")
+                p_ci1, p_ci2, p_ci3, nrow = 4, ncol = 3, align = "vh") #, labels = "AUTO")
 #pg <- plot_grid(plotlist = align_plots(p_ac1, p_ac2, p_ac3, p_au1, p_au2, p_au3, p_cs1, p_cs2, p_cs3,
 #                p_ci1, p_ci2, p_ci3), nrow = 4, ncol = 3, align = "vh", labels = "AUTO")
 legend_b <- get_legend( p_au1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/correl.png', width = 22, height = 24, units = 'cm', res = 400)
+png('../Figures/correl.png', width = 22, height = 24, units = 'cm', res = 400)
  plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .03))
 dev.off()
 
@@ -212,7 +214,7 @@ p2_acc <- plot_grouped_boxplot(training_size, 1, red, ts_names,
                 val_tech = acc_tech, legend_title = ts_title)
 p3_acc <- plot_grouped_boxplot(class_ratio, 1, red, cr_names, val_tech = acc_tech,
                 legend_title = "CR")
-png('../../Figures/grouped_4_acc.png', width = 16, height = 25, units = 'cm', res = 400)
+png('../Figures/grouped_4_acc.png', width = 16, height = 25, units = 'cm', res = 400)
 plot_grid(p1_acc, p2_acc, p3_acc, align = "v", nrow = 3, labels = "AUTO")
 dev.off()
 
@@ -222,7 +224,7 @@ p1_auc <- plot_grouped_boxplot(signal_strength, 2, orange, legend_labs = ss_lege
 p2_auc <- plot_grouped_boxplot(training_size, 2, orange, ts_names, legend_title = ts_title)
 p3_auc <- plot_grouped_boxplot(class_ratio, 2, orange, cr_names, legend_title = "CR")
 
-png('../../Figures/grouped_4_AUC.png', width = 16, height = 25, units = 'cm', res = 400)
+png('../Figures/grouped_4_AUC.png', width = 16, height = 25, units = 'cm', res = 400)
 plot_grid(p1_auc, p2_auc, p3_auc, align = "v", nrow = 3, labels = "AUTO")
 dev.off()
 
@@ -233,7 +235,7 @@ p2_cs <- plot_grouped_boxplot(training_size, 3, blue, ts_names, legend_title = t
 p3_cs <- plot_grouped_boxplot(class_ratio, 3, blue, cr_names, legend_title = "CR") +
   coord_cartesian(ylim = c(-1, 1))
 
-png('../../Figures/grouped_4_CS.png', width = 16, height = 25, units = 'cm', res = 400)
+png('../Figures/grouped_4_CS.png', width = 16, height = 25, units = 'cm', res = 400)
 plot_grid(p1_cs, p2_cs, p3_cs, align = "v", nrow = 3, labels = "AUTO")
 dev.off()
 
@@ -245,7 +247,7 @@ p2_ci <- plot_grouped_boxplot(training_size, 4, purple, ts_names, legend_title =
 p3_ci<- plot_grouped_boxplot(class_ratio, 4, purple, cr_names, legend_title = "CR") +
   coord_cartesian(ylim = c(-2, 2))
 
-png('../../Figures/grouped_4_CI.png', width = 16, height = 25, units = 'cm', res = 400)
+png('../Figures/grouped_4_CI.png', width = 16, height = 25, units = 'cm', res = 400)
 plot_grid(p1_ci, p2_ci, p3_ci, align = "v", nrow = 3,  labels = "AUTO")
 dev.off()
 
@@ -283,7 +285,7 @@ pg <- plot_grid(plotlist = align_plots(p1, p2, p3), nrow = 1, ncol = 3,
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/EP_4.png', width = 22, height = 8, units = 'cm', res = 400)
+png('../Figures/EP_4.png', width = 22, height = 8, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .1))
 dev.off()
 
@@ -354,7 +356,7 @@ pg <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 2, ncol = 3, align = "vh",
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/acc_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/acc_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 
@@ -370,7 +372,7 @@ pg <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 2, ncol = 3, align = "vh",
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/auc_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/auc_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 
@@ -392,7 +394,7 @@ pg <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 2, ncol = 3, align = "vh",
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/cs_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/cs_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 
@@ -415,7 +417,7 @@ pg <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 2, ncol = 3, align = "vh",
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/ci_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/ci_bias_rmse.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=penal_A_uncor
+#SBATCH --job-name=penal_B_uncor
 #SBATCH --output=../output/%x_%j.out
 #SBATCH --error=../output/%x_%j.err
 #SBATCH --mail-user=talyigasg@gmail.com
@@ -33,7 +33,7 @@ echo "It is now $DATE"
 
 # Run the file
 echo "[$SHELL] Run script"
-Rscript penalized_A_uncor.R
+Rscript 5.B_penalized.R
 echo "[$SHELL] Script finished"
 
 echo "#### Finished R script"

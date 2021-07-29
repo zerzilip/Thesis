@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=signal_strength_simulation
-#SBATCH --output=%x_%j.out
-#SBATCH --error=%x_%j.err
-#SBATCH --mail-user="<your_e-mail>"
-#SBATCH --mail-type="ALL"
-#SBATCH --partition="cpu-short"
-#SBATCH --time=02:30:30
+#SBATCH --job-name=class_ratio
+#SBATCH --output=../output/%x_%j.out
+#SBATCH --error=../output/%x_%j.err
+#SBATCH --mail-user=talyigasg@gmail.com
+#SBATCH --mail-type=FAIL,END
+#SBATCH --partition=cpu-medium,cpu-long,gpu-medium,gpu-long
+#SBATCH --time=08:59:59
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
-#SBATCH --mem=100M
+#SBATCH --mem=1000M
 
 #
 # loading the R module
@@ -33,7 +33,7 @@ echo "It is now $DATE"
 
 # Run the file
 echo "[$SHELL] Run script"
-Rscript signal_strength.R
+Rscript 4.C_class_ratio.R
 echo "[$SHELL] Script finished"
 
 echo "#### Finished R serial test"

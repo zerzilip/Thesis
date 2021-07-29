@@ -54,34 +54,3 @@ create_performance_measures_list <- function(){
                       names = perf_meas_names)
   return(return_list)
 }
-
-
-# 
-# MSE_calc <- function(y, prob, ...) mean((y-prob)^2)
-# MSE_no_information <- 1
-# MSE <- list(calc = MSE_calc, no_info = MSE_no_information, names = "MSE")
-# 
-# AUC_calc <- function(y, prob, ...) as.numeric(pROC::auc(y, prob, quiet = TRUE))
-# AUC_no_information <- 0.5
-# AUC <- list(calc = AUC_calc, no_info = AUC_no_information, names = "AUC")
-# 
-# logit <-
-#   function (p)
-#     log(p/(1 - p))
-# 
-# cox_calibration_calc <- function(y, prob, ...){
-#   dat <- data.frame(e = prob, o = y)
-#   dat$e[dat$e < 0.0000000001] = 0.0000000001
-#   dat$e[dat$e > 0.9999999999] = 0.9999999999
-#   dat$logite <- logit(dat$e)
-#   
-#   mfit = glm(formula = o~logite, 
-#              family = binomial(link = "logit"), dat)
-#   
-#   return(list(slope = as.numeric(mfit$coefficients[2]),
-#               intercept = as.numeric(mfit$coefficients[1])))
-# }
-# cox_no_information <- 1
-# cox_calibration <- list(calc = cox_calibration_calc, no_info =cox_no_information,
-#                         names = c("cox_slope", "cox_intercept"))
-

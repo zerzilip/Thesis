@@ -162,6 +162,9 @@ simulate_different_sample_size <- function(n_sim, external_sizes, beta,
 ```
 
 ### Running the simulations
+
+Simulation *3.D*
+
 ```{r}
 set.seed(20071969)
 n_training <- 100 #relatively small sample size but almost always EPV > 10
@@ -220,7 +223,7 @@ get_quantiles(sim_results$auc)
 get_quantiles(sim_results$slope)
 get_quantiles(sim_results$intercept)
 ```
-As we can see all the performance measures except the slope behaves similarly, their average does not depend on the sample size. Howeve, for the calibration slope, it shows an assymptotic behaviour. 
+As we can see all the performance measures except the slope behaves similarly, their average does not depend on the sample size. However, for the calibration slope, it shows an asymptotic behavior. 
 
 
 ```{r}
@@ -237,7 +240,7 @@ grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
 
 
 ```{r, eval = FALSE}
-png('../Figures/test.png', width = 18, height = 22, units = 'cm', res = 400)
+png('../Figures/ext_ep.png', width = 18, height = 22, units = 'cm', res = 400)
 grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
 dev.off()
 ```
@@ -245,7 +248,7 @@ dev.off()
 
 
 #Fixing the model
-
+Simulation *3.B*
 ```{r}
 set.seed(20071969)
 n_training <- 100 #relatively small sample size but almost always EPV > 10
@@ -292,6 +295,7 @@ grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
 dev.off()
 ```
 
+Simulation *3.C*
 
 ```{r, eval=FALSE}
 set.seed(05051789)

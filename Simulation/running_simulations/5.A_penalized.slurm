@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=train_size
+#SBATCH --job-name=penal_A_uncor
 #SBATCH --output=../output/%x_%j.out
 #SBATCH --error=../output/%x_%j.err
 #SBATCH --mail-user=talyigasg@gmail.com
 #SBATCH --mail-type=FAIL,END
 #SBATCH --partition=cpu-medium,cpu-long,gpu-medium,gpu-long
-#SBATCH --time=05:59:59
+#SBATCH --time=18:59:59
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=20
 #SBATCH --mem=1000M
 
 #
@@ -33,7 +33,7 @@ echo "It is now $DATE"
 
 # Run the file
 echo "[$SHELL] Run script"
-Rscript training_sample_size.R
+Rscript 5.A_penalized.R
 echo "[$SHELL] Script finished"
 
-echo "#### Finished R serial test"
+echo "#### Finished R script"

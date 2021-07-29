@@ -299,4 +299,4 @@ for (i in 1:5){
 rm(d); gc() # a little garbage collection
 max_performance <- data.frame(accuracy = max_acc, AUC = max_auc)
 save(selected_betas, max_performance,
-     file = "Simulation/running_simulations/selected_beta_uncor.RData")
+     file = "../Simulation/running_simulations/selected_beta_uncor.RData")

@@ -68,12 +68,14 @@ no_l <-  theme(legend.position = "none",
 y_scale <- scale_y_continuous(breaks=c(-1, -.5, 0, .5, 1), limits=c(-1, 1))
 
 plot_estimates_and_EP(B_penalized$n_pred_200, 1, 5)
+plot_estimates_and_EP(B_penalized$n_pred_10, 4, 6)
+
 
 p1 <- plot_correlations(A_penalized, 6, p_vars, val_cols, val_labels, 
-  c(1,3,5,6,7), no_scale = T) + no_l + ggtitle("5.A (lasso)") +
+  c(1,3,5,6,7), no_scale = T) + no_l + ggtitle("Simulation 5.A (lasso)") +
   ylab("\u03c1 (accuracy)") + xlab("") + y_scale
 p2 <- plot_correlations(B_penalized, 1, p_vars, val_cols, val_labels, 
-  c(1,3,5,6,7), no_scale = T) + no_l + ggtitle("5.B (ridge)") +
+  c(1,3,5,6,7), no_scale = T) + no_l + ggtitle("Simulation 5.B (ridge)") +
   ylab("") + xlab("") + y_scale
 p3 <- plot_correlations(A_penalized, 7, p_vars, val_cols, val_labels, 
   no_scale = T) + no_l + ylab("\u03c1 (AUC)") + xlab("") + y_scale
@@ -93,7 +95,7 @@ pg <-  plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, nrow = 4, align = "vh")
 legend_b <- get_legend(p3 + guides(color = guide_legend(nrow = 1)) + 
                             theme(legend.position = "bottom"))
 
-png('../../Figures/penal_correl.png', width = 16, height = 24, units = 'cm', res = 400)
+png('../Figures/penal_correl.png', width = 16, height = 24, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .03))
 dev.off()
 
@@ -115,7 +117,7 @@ cond <- FALSE #set whether EP or EP_T should be compared
 no_l <-  theme(legend.position = "none", 
                legend.title.align=0.5,
                plot.title = element_text(hjust = 0.5))
-box_ylab <- ylab(expression(P[V]-EP[T]))
+box_ylab <- ylab(expression(P[V]-EP))
 
 p1 <- plot_grouped_boxplot(A_penalized, 6, red, NULL, c(1,3,5,6,7), p_vars, "p",
   conditional = cond) + no_l + ggtitle("5.A (lasso)") + box_ylab
@@ -144,7 +146,7 @@ p6 <- plot_comparison(B_penalized, 1, p_vars, T, val_cols, val_labels,
 # pg2 <- plot_grid(pg2, legend_b2, ncol = 1, rel_heights = c(1, .07))
 # pg <- plot_grid(pg1, pg2, nrow = 2, rel_heights = c(1, 2))
 # 
-# png('../../Figures/penalized_acc.png', width = 18, height = 24, units = 'cm', res = 400)
+# png('../Figures/penalized_acc.png', width = 18, height = 24, units = 'cm', res = 400)
 # pg
 # dev.off()
 
@@ -158,7 +160,7 @@ legend_b2 <- get_legend(p3 + theme(legend.position = "right"))
 pg2 <- plot_grid(pg2, legend_b2, ncol = 2, rel_widths = c(1, .12))
 pg <- plot_grid(pg1, pg2, nrow = 2, rel_heights = c(1, 2))
 
-png('../../Figures/penalized_acc.png', width = 18, height = 24, units = 'cm', res = 400)
+png('../Figures/penalized_acc.png', width = 18, height = 24, units = 'cm', res = 400)
 pg
 dev.off()
 
@@ -191,7 +193,7 @@ legend_b2 <- get_legend(p3 + theme(legend.position = "right"))
 pg2 <- plot_grid(pg2, legend_b2, ncol = 2, rel_widths = c(1, .12))
 pg <- plot_grid(pg1, pg2, nrow = 2, rel_heights = c(1, 2))
 
-png('../../Figures/penalized_auc.png', width = 18, height = 24, units = 'cm', res = 400)
+png('../Figures/penalized_auc.png', width = 18, height = 24, units = 'cm', res = 400)
 pg
 dev.off()
 
@@ -222,7 +224,7 @@ legend_b2 <- get_legend(p3 + theme(legend.position = "right"))
 pg2 <- plot_grid(pg2, legend_b2, ncol = 2, rel_widths = c(1, .12))
 pg <- plot_grid(pg1, pg2, nrow = 2, rel_heights = c(1, 2))
 
-png('../../Figures/penalized_cs.png', width = 18, height = 24, units = 'cm', res = 400)
+png('../Figures/penalized_cs.png', width = 18, height = 24, units = 'cm', res = 400)
 pg
 dev.off()
 
@@ -254,7 +256,7 @@ legend_b2 <- get_legend(p3 + theme(legend.position = "right"))
 pg2 <- plot_grid(pg2, legend_b2, ncol = 2, rel_widths = c(1, .12))
 pg <- plot_grid(pg1, pg2, nrow = 2, rel_heights = c(1, 2))
 
-png('../../Figures/penalized_ci.png', width = 18, height = 24, units = 'cm', res = 400)
+png('../Figures/penalized_ci.png', width = 18, height = 24, units = 'cm', res = 400)
 pg
 dev.off()
 
@@ -270,7 +272,7 @@ pg <- plot_grid(p1, p2, p3, p4, nrow = 2, ncol = 2, align = "vh", labels = "AUTO
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/penalized_acc.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/penalized_acc.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 
@@ -290,7 +292,7 @@ pg <- plot_grid(p1, p2, p3, p4, p5, p6, p7, p8,
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/penalized_acc_comp.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/penalized_acc_comp.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 
@@ -320,7 +322,7 @@ pg <- plot_grid(p1, p2, p3, p4, p5, p6, p7, p8,
 legend_b <- get_legend( p1 + guides(color = guide_legend(nrow = 1)) + 
                           theme(legend.position = "bottom"))
 
-png('../../Figures/penalized_auc_comp.png', width = 22, height = 15, units = 'cm', res = 400)
+png('../Figures/penalized_auc_comp.png', width = 22, height = 15, units = 'cm', res = 400)
 plot_grid(pg, legend_b, ncol = 1, rel_heights = c(1, .05))
 dev.off()
 

@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=class_ratio
+#SBATCH --job-name=train_size
 #SBATCH --output=../output/%x_%j.out
 #SBATCH --error=../output/%x_%j.err
 #SBATCH --mail-user=talyigasg@gmail.com
 #SBATCH --mail-type=FAIL,END
 #SBATCH --partition=cpu-medium,cpu-long,gpu-medium,gpu-long
-#SBATCH --time=08:59:59
+#SBATCH --time=05:59:59
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=1000M
@@ -33,7 +33,7 @@ echo "It is now $DATE"
 
 # Run the file
 echo "[$SHELL] Run script"
-Rscript class_ratio.R
+Rscript 4.B_training_sample_size.R
 echo "[$SHELL] Script finished"
 
 echo "#### Finished R serial test"
